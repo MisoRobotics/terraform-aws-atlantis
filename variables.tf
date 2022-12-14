@@ -353,10 +353,13 @@ variable "ecs_fargate_spot" {
   default     = false
 }
 
-variable "ecs_container_insights" {
-  description = "Controls if ECS Cluster has container insights enabled"
-  type        = bool
-  default     = false
+variable "ecs_cluster_settings" {
+  description = "Configuration block(s) with cluster settings. For example, this can be used to enable CloudWatch Container Insights for a cluster"
+  type        = map(string)
+  default = {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 variable "ecs_service_desired_count" {

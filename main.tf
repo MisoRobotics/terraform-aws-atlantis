@@ -28,7 +28,7 @@ locals {
   alb_authentication_method = length(keys(var.alb_authenticate_oidc)) > 0 ? "authenticate-oidc" : length(keys(var.alb_authenticate_cognito)) > 0 ? "authenticate-cognito" : "forward"
 
   # ECS - existing or new?
-  ecs_cluster_id = var.create_ecs_cluster ? module.ecs.ecs_cluster_id : var.ecs_cluster_id
+  ecs_cluster_id = var.create_ecs_cluster ? module.ecs.cluster_id : var.ecs_cluster_id
 
   # Container definitions
   container_definitions = var.custom_container_definitions == "" ? var.atlantis_bitbucket_user_token != "" ? jsonencode(concat([module.container_definition_bitbucket.json_map_object], var.extra_container_definitions)) : jsonencode(concat([module.container_definition_github_gitlab.json_map_object], var.extra_container_definitions)) : var.custom_container_definitions
@@ -210,7 +210,7 @@ resource "aws_ssm_parameter" "atlantis_github_app_key" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "v3.6.0"
+  version = "v3.18.1"
 
   create_vpc = var.vpc_id == ""
 
@@ -237,7 +237,7 @@ module "vpc" {
 ################################################################################
 module "alb" {
   source  = "terraform-aws-modules/alb/aws"
-  version = "v6.5.0"
+  version = "v8.2.1"
 
   name     = var.name
   internal = var.internal
@@ -343,7 +343,7 @@ resource "aws_lb_listener_rule" "unauthenticated_access_for_webhook" {
 ################################################################################
 module "alb_https_sg" {
   source  = "terraform-aws-modules/security-group/aws//modules/https-443"
-  version = "v4.3.0"
+  version = "v4.16.2"
 
   name        = "${var.name}-alb-https"
   vpc_id      = local.vpc_id
@@ -357,7 +357,7 @@ module "alb_https_sg" {
 
 module "alb_http_sg" {
   source  = "terraform-aws-modules/security-group/aws//modules/http-80"
-  version = "v4.3.0"
+  version = "v4.16.2"
 
   name        = "${var.name}-alb-http"
   vpc_id      = local.vpc_id
@@ -370,7 +370,7 @@ module "alb_http_sg" {
 
 module "atlantis_sg" {
   source  = "terraform-aws-modules/security-group/aws"
-  version = "v4.3.0"
+  version = "v4.16.2"
 
   name        = var.name
   vpc_id      = local.vpc_id
@@ -393,7 +393,7 @@ module "atlantis_sg" {
 
 module "efs_sg" {
   source  = "terraform-aws-modules/security-group/aws"
-  version = "v4.8.0"
+  version = "v4.16.2"
   count   = var.enable_ephemeral_storage ? 0 : 1
 
   name        = "${var.name}-efs"
@@ -413,7 +413,7 @@ module "efs_sg" {
 ################################################################################
 module "acm" {
   source  = "terraform-aws-modules/acm/aws"
-  version = "v3.2.0"
+  version = "v4.3.1"
 
   create_certificate = var.certificate_arn == ""
 
@@ -503,20 +503,37 @@ resource "aws_efs_access_point" "this" {
 ################################################################################
 module "ecs" {
   source  = "terraform-aws-modules/ecs/aws"
-  version = "v3.3.0"
+  version = "v4.1.2"
 
-  create_ecs = var.create_ecs_cluster
+  create = var.create_ecs_cluster
 
-  name               = var.name
-  container_insights = var.ecs_container_insights
-
-  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
-
-  default_capacity_provider_strategy = [
-    {
-      capacity_provider = var.ecs_fargate_spot ? "FARGATE_SPOT" : "FARGATE"
+  cluster_name = var.name
+  fargate_capacity_providers = {
+    FARGATE = {
+      default_capacity_provider_strategy = {
+        weight = 50
+        base   = 20
+      }
     }
-  ]
+    FARGATE_SPOT = {
+      default_capacity_provider_strategy = {
+        weight = 50
+      }
+    }
+  }
+  cluster_settings = var.ecs_cluster_settings
+
+  cluster_configuration = {
+    execute_command_configuration = {
+      logging = "OVERRIDE"
+      log_configuration = {
+        cloud_watch_log_group_name = "/aws/ecs/aws-ec2"
+      }
+    }
+  }
+
+
+  default_capacity_provider_use_fargate = !var.ecs_fargate_spot
 
   tags = local.tags
 }
