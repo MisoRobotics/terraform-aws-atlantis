@@ -35,10 +35,6 @@ locals {
 
   container_definition_environment = [
     {
-      name  = "ATLANTIS_ALLOW_REPO_CONFIG"
-      value = var.allow_repo_config
-    },
-    {
       name  = "ATLANTIS_GITLAB_HOSTNAME"
       value = var.atlantis_gitlab_hostname
     },

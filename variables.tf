@@ -566,12 +566,6 @@ variable "atlantis_repo_allowlist" {
   type        = list(string)
 }
 
-variable "allow_repo_config" {
-  description = "When true allows the use of atlantis.yaml config files within the source repos."
-  type        = string
-  default     = "false"
-}
-
 variable "atlantis_log_level" {
   description = "Log level that Atlantis will run with. Accepted values are: <debug|info|warn|error>"
   type        = string
