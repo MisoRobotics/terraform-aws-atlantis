@@ -26,6 +26,11 @@ output "task_role_arn" {
   value       = aws_iam_role.ecs_task_execution.arn
 }
 
+output "task_role_name" {
+  description = "The Atlantis ECS task role name"
+  value       = aws_iam_role.ecs_task_execution.name
+}
+
 output "task_role_id" {
   description = "The Atlantis ECS task role id"
   value       = aws_iam_role.ecs_task_execution.id
