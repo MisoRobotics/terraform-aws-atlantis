@@ -33,7 +33,7 @@ locals {
   # Container definitions
   container_definitions = var.custom_container_definitions == "" ? var.atlantis_bitbucket_user_token != "" ? jsonencode(concat([module.container_definition_bitbucket.json_map_object], var.extra_container_definitions)) : jsonencode(concat([module.container_definition_github_gitlab.json_map_object], var.extra_container_definitions)) : var.custom_container_definitions
 
-  container_definition_environment = [
+  container_definition_environment = flatten([
     {
       name  = "ATLANTIS_GITLAB_HOSTNAME"
       value = var.atlantis_gitlab_hostname
@@ -81,8 +81,22 @@ locals {
     {
       name  = "ATLANTIS_WRITE_GIT_CREDS"
       value = var.atlantis_write_git_creds
-    }
-  ]
+    },
+    !var.redis_backend ? [] : [
+      {
+        name  = "ATLANTIS_LOCKING_DB_TYPE"
+        value = "redis"
+      },
+      {
+        name  = "ATLANTIS_REDIS_HOST"
+        value = try(aws_elasticache_replication_group.redis[0].primary_endpoint_address, "")
+      },
+      {
+        name  = "ATLANTIS_REDIS_PASSWORD"
+        value = try(aws_elasticache_replication_group.redis[0].auth_token, "")
+      }
+    ],
+  ])
 
   # ECS task definition
   latest_task_definition_rev = var.external_task_definition_updates ? max(aws_ecs_task_definition.atlantis.revision, data.aws_ecs_task_definition.atlantis[0].revision) : aws_ecs_task_definition.atlantis.revision
